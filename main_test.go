@@ -95,3 +95,50 @@ func TestRunWithArgs_NonExistentFile(t *testing.T) {
 		t.Errorf("expected file open error, got: %v", err)
 	}
 }
+
+func TestRunWithArgs_ContextCancellation(t *testing.T) {
+	// Create a context that will be canceled
+	ctx, cancel := context.WithCancel(context.Background())
+	
+	// Create a slow reader that will block
+	slowReader := &slowReader{delay: 100}
+	var stdout bytes.Buffer
+
+	// Start the conversion in a goroutine
+	errCh := make(chan error, 1)
+	go func() {
+		err := RunWithArgs(ctx, []string{}, slowReader, &stdout)
+		errCh <- err
+	}()
+
+	// Cancel the context after a short delay
+	cancel()
+
+	// Wait for the function to return
+	err := <-errCh
+	if err == nil {
+		t.Fatal("expected error due to context cancellation")
+	}
+
+	if err != context.Canceled {
+		t.Errorf("expected context.Canceled, got: %v", err)
+	}
+}
+
+// slowReader simulates a slow input source
+type slowReader struct {
+	delay int
+	pos   int
+}
+
+func (sr *slowReader) Read(p []byte) (n int, err error) {
+	if sr.pos == 0 {
+		// First read returns some data
+		data := []byte("key = \"value\"\n")
+		copy(p, data)
+		sr.pos += len(data)
+		return len(data), nil
+	}
+	// Subsequent reads would block indefinitely in real stdin
+	select {}
+}
