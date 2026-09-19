@@ -1,6 +1,6 @@
-# Claude Code Instructions
+# Agent Instructions
 
-This project uses Claude Code for development assistance.
+This project uses AI coding agents for development assistance.
 
 ## Commands
 
